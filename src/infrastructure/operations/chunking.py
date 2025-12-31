@@ -7,6 +7,11 @@ class ChunkingStrategy(Protocol):
     def create(self, **kwargs) -> op.FunctionSpec:
         ...
 
+class ChunkingStrategy(Protocol):
+    """Chunking strategy interface"""
+    def create(self, **kwargs) -> op.FunctionSpec:
+        ...
+
 class RecursiveChunkingStrategy:
     """Recursive chunking using SplitRecursively"""
     def create(self, **kwargs) -> op.FunctionSpec:
@@ -22,9 +27,6 @@ class RecursiveChunkingStrategy:
                     ],
                 )
             ]),
-            language=kwargs.get("language", "text"),
-            chunk_size=kwargs.get("chunk_size", 600),
-            chunk_overlap=kwargs.get("chunk_overlap", 100),
         )
 
 class SeparatorChunkingStrategy:
@@ -46,11 +48,20 @@ CHUNKING_REGISTRY: dict[str, type[ChunkingStrategy]] = {
     "separator": SeparatorChunkingStrategy,
 }
 
-def get_chunking_function(method: str, **kwargs) -> op.FunctionSpec:
-    """Get chunking FunctionSpec from registry with flexible parameters"""
+def get_chunking_function(method: str, **kwargs) -> tuple[op.FunctionSpec, dict]:
+    """Get chunking FunctionSpec and return unused kwargs for transform()"""
     if method not in CHUNKING_REGISTRY:
         raise ValueError(f"Unknown chunking method: {method}. Available: {list(CHUNKING_REGISTRY.keys())}")
     
     strategy_class = CHUNKING_REGISTRY[method]
     strategy = strategy_class()
-    return strategy.create(**kwargs)
+    
+    used_keys = {
+        "recursive": {"custom_languages"},
+        "separator": {"separators_regex", "keep_separator", "include_empty", "trim"},
+    }
+    
+    used = used_keys.get(method, set())
+    unused_kwargs = {k: v for k, v in kwargs.items() if k not in used}
+    
+    return strategy.create(**kwargs), unused_kwargs
