@@ -4,6 +4,8 @@ from src.infrastructure.operations.file_parser import extract_file_elements
 from src.infrastructure.operations.embeddings import TextEmbedder, ImageEmbedder
 
 class BasicPipeline:
+    _instance: "BasicPipeline | None" = None # 클래스 변수로 인스턴스 저장
+
     def __init__(
         self,
         text_embedding_model_name: str | None = None,
@@ -17,9 +19,16 @@ class BasicPipeline:
         self.qdrant_connection = qdrant_connection
         self.qdrant_collection_text = qdrant_collection_text
         self.qdrant_collection_image = qdrant_collection_image
+        BasicPipeline._instance = self # 클래스 변수에 인스턴스 저장
     
-    @cocoindex.flow_def(name="BasicPipeline")
-    def basic_flow(
+    @classmethod
+    def get_instance(cls) -> "BasicPipeline":
+        """Get the pipeline instance"""
+        if cls._instance is None:
+            raise RuntimeError("BasicPipeline instance not set. Create an instance first.")
+        return cls._instance
+    
+    def _basic_flow_impl(
         self,
         flow_builder: cocoindex.FlowBuilder,
         data_scope: cocoindex.DataScope
@@ -61,7 +70,7 @@ class BasicPipeline:
                         embedding=chunk["embedding"],
                     )
                 with page["images"].row() as image: # image 처리
-                    image["embedding"] = image["data"].transform(self.image_embedder)
+                    image["embedding"] = image["data"].call(self.image_embedder)
                     image_output.collect(
                         id=cocoindex.GeneratedField.UUID,
                         filename=doc["filename"],
@@ -86,3 +95,12 @@ class BasicPipeline:
             ),
             primary_key_fields=["id"],
         )
+
+@cocoindex.flow_def(name="BasicPipeline")
+def basic_flow(
+    flow_builder: cocoindex.FlowBuilder,
+    data_scope: cocoindex.DataScope
+) -> None:
+    """Flow definition that uses the registered pipeline instance"""
+    pipeline = BasicPipeline.get_instance()
+    pipeline._basic_flow_impl(flow_builder, data_scope)

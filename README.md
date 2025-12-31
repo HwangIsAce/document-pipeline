@@ -13,7 +13,14 @@ A pipeline project that parses documents and indexes them into a vector database
 
 # To-be-Organized
 
-## Qdrant 실행
+## Postgres & Qdrant 실행
 ```
+docker run -d \
+  --name postgres \
+  -e POSTGRES_PASSWORD=postgres \
+  -e POSTGRES_DB=cocoindex_db \
+  -p 5432:5432 \
+  postgres
+
 docker run -p 6333:6333 -p 6334:6334 qdrant/qdrant
 ```

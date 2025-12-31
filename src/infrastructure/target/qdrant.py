@@ -11,10 +11,16 @@ class QdrantProvider:
     def get_connection(self):
         """get connection object for use in Qdrant target"""
         if self._connection is None:
-            self._connection = cocoindex.add_auth_entry(
-                self._connection_name,
-                cocoindex.targets.QdrantConnection(grpc_url=self.url)
-            )
+            try:
+                self._connection = cocoindex.add_auth_entry(
+                    self._connection_name,
+                    cocoindex.targets.QdrantConnection(grpc_url=self.url)
+                )
+            except RuntimeError as e:
+                if "already exists" in str(e):
+                    self._connection = cocoindex.targets.QdrantConnection(grpc_url=self.url)
+                else:
+                    raise
         return self._connection
 
     def get_client(self):
