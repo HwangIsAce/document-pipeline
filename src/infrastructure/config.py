@@ -16,5 +16,16 @@ class Config:
                 "QDRANT_COLLECTION_TEXT": os.getenv("QDRANT_COLLECTION_TEXT", "text_collection"),
                 "QDRANT_COLLECTION_IMAGE": os.getenv("QDRANT_COLLECTION_IMAGE", "image_collection"),
             },
-            
         }
+        
+        # Chunking 기본값
+        self.CHUNKING_METHOD = "recursive"
+        self.CHUNKING_KWARGS = {
+            "language": "text",
+            "chunk_size": 600,
+            "chunk_overlap": 100,
+        }
+        
+        # Export 기본값
+        self.EXPORT_TARGET = "qdrant"
+        self.TARGET_KWARGS = {}
