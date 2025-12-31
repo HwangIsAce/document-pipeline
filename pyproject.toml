@@ -1,0 +1,20 @@
+[project]
+name = "document-pipeline"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "pillow>=12.0.0",
+    "pytest>=9.0.2",
+    "python-dotenv>=1.2.1",
+    "qdrant-client>=1.16.2",
+    "requests>=2.32.5",
+    "sentence-transformers>=5.2.0",
+    "torch>=2.9.1",
+    "transformers>=4.57.3",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
