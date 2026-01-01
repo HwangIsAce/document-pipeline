@@ -1,5 +1,5 @@
 import json
-import asyncio
+import logging
 import cocoindex
 from pathlib import Path
 
@@ -7,6 +7,8 @@ from src.infrastructure.target.qdrant import QdrantProvider
 from src.infrastructure.config import Config
 from src.application.pipelines.basic_pipeline import BasicPipeline
 from src.application.services.search_service import SearchService
+
+logger = logging.getLogger(__name__)
 
 class ApplicationContainer:
     """Application container for indexing pipeline and search service"""    
@@ -19,7 +21,7 @@ class ApplicationContainer:
         self.config = config
         
         # Qdrant Provider 초기화
-        qdrant_url = self.config.DB_CONFIGS["QDRANT"]["QDRANT_GRPC_URL"]
+        qdrant_url = self.config.TARGET_KWARGS["QDRANT_GRPC_URL"]
         self.qdrant_provider = QdrantProvider(url=qdrant_url)
         
         # 인덱싱 파이프라인 초기화
@@ -37,8 +39,8 @@ class ApplicationContainer:
             qdrant_provider=self.qdrant_provider,
             text_embedder=self.basic_pipeline.text_embedder,
             image_embedder=self.basic_pipeline.image_embedder,
-            text_collection_name=self.config.DB_CONFIGS["QDRANT"]["QDRANT_COLLECTION_TEXT"],
-            image_collection_name=self.config.DB_CONFIGS["QDRANT"]["QDRANT_COLLECTION_IMAGE"],
+            text_collection_name=self.config.TARGET_KWARGS["collection_text"],
+            image_collection_name=self.config.TARGET_KWARGS["collection_image"],
         )
     
     @staticmethod
@@ -58,8 +60,6 @@ class ApplicationContainer:
         chunking_method: str | None = None,
         chunking_kwargs: str = "{}",
         export_target: str | None = None,
-        target_db_text: str | None = None,
-        target_db_image: str | None = None,
         target_kwargs: str = "{}",
         pipeline_kwargs: str = "{}",
     ) -> tuple[str, str]:
@@ -80,10 +80,11 @@ class ApplicationContainer:
         merged_target_kwargs = {
             **self.config.TARGET_KWARGS,
             "connection": self.qdrant_provider.get_connection(),
-            "collection_text": target_db_text or self.config.DB_CONFIGS["QDRANT"]["QDRANT_COLLECTION_TEXT"],
-            "collection_image": target_db_image or self.config.DB_CONFIGS["QDRANT"]["QDRANT_COLLECTION_IMAGE"],
             **user_target_kwargs,
         }
+        
+        collection_text = merged_target_kwargs.get("collection_text", "text_collection")
+        collection_image = merged_target_kwargs.get("collection_image", "image_collection")
         
         # 파이프라인 설정 업데이트
         if chunking_method:
@@ -100,18 +101,19 @@ class ApplicationContainer:
                 if hasattr(self.basic_pipeline, key):
                     setattr(self.basic_pipeline, key, value)
         
-        # Run sync CocoIndex API in thread pool to avoid blocking event loop
-        def _setup_flows():
-            try:
-                cocoindex.setup_all_flows(report_to_stdout=False)
-            except RuntimeError as e:
-                # 컬렉션이 이미 존재하는 경우 에러를 무시
-                error_msg = str(e)
-                if "already exists" in error_msg:
-                    pass  # 컬렉션이 이미 존재하면 정상적으로 넘어감
-                else:
-                    raise
-        
-        await asyncio.to_thread(_setup_flows)
+        logger.info(f"Indexing document '{filename}' to Qdrant: text_collection={collection_text}, image_collection={collection_image}")
+
+        # 파이프라인 실행
+        try:
+            flow = cocoindex.flow.flow_by_name("BasicPipeline")
+            logger.debug("Flow retrieved, starting update_async()")
+            await flow.update_async()
+            logger.info(f"Successfully saved document '{filename}' to Qdrant: text_collection={collection_text}, image_collection={collection_image}")
+        except Exception as e:
+            logger.error(
+                f"Failed to save document '{filename}' to Qdrant: {e}",
+                exc_info=True
+            )
+            raise
         
         return filename, str(filepath)
