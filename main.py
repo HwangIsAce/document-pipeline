@@ -19,7 +19,15 @@ def main():
 
     container.qdrant_provider.get_connection()
     
-    cocoindex.setup_all_flows(report_to_stdout=False)
+    try:
+        cocoindex.setup_all_flows(report_to_stdout=False)
+    except RuntimeError as e:
+        # 컬렉션이 이미 존재하는 경우 에러를 무시
+        error_msg = str(e)
+        if "already exists" in error_msg:
+            print("Collections already exist, skipping setup...")
+        else:
+            raise
 
     app = create_app(container)
     uvicorn.run(app, host="0.0.0.0", port=8000)

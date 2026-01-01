@@ -31,7 +31,7 @@ def create_app(container: ApplicationContainer) -> FastAPI:
             content = await file.read()
             filename = file.filename or "document.pdf"
             
-            filename, filepath = container.index_document(
+            filename, filepath = await container.index_document(
                 file_content=content,
                 filename=filename,
                 chunking_method=chunking_method.value,

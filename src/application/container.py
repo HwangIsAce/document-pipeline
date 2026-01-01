@@ -1,4 +1,5 @@
 import json
+import asyncio
 import cocoindex
 from pathlib import Path
 
@@ -50,7 +51,7 @@ class ApplicationContainer:
         except json.JSONDecodeError:
             return {}
     
-    def index_document(
+    async def index_document(
         self,
         file_content: bytes,
         filename: str,
@@ -99,6 +100,18 @@ class ApplicationContainer:
                 if hasattr(self.basic_pipeline, key):
                     setattr(self.basic_pipeline, key, value)
         
-        cocoindex.setup_all_flows(report_to_stdout=False)
+        # Run sync CocoIndex API in thread pool to avoid blocking event loop
+        def _setup_flows():
+            try:
+                cocoindex.setup_all_flows(report_to_stdout=False)
+            except RuntimeError as e:
+                # 컬렉션이 이미 존재하는 경우 에러를 무시
+                error_msg = str(e)
+                if "already exists" in error_msg:
+                    pass  # 컬렉션이 이미 존재하면 정상적으로 넘어감
+                else:
+                    raise
+        
+        await asyncio.to_thread(_setup_flows)
         
         return filename, str(filepath)
