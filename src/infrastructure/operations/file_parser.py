@@ -1,6 +1,7 @@
 import os
 import io
 import base64
+import re
 import requests
 import logging
 import cocoindex
@@ -84,13 +85,20 @@ class UpstageParser:
             content_data = element.get("content", {})
             element_id = element.get("id", 0)
             
-            # 텍스트 추출 - text 우선, 없으면 markdown 사용
+            # 텍스트 추출 - text 우선, 없으면 markdown, 마지막으로 html 사용
             text = content_data.get("text", "")
-            if not text:
+            if not text or not text.strip():
                 text = content_data.get("markdown", "")
+            if not text or not text.strip():
+                html_text = content_data.get("html", "")
+                # HTML에서 텍스트 추출 (간단한 방법: 태그 제거)
+                if html_text:
+                    import re
+                    # HTML 태그 제거
+                    text = re.sub(r'<[^>]+>', '', html_text)
             
-            if text.strip():
-                pages_dict[page_num]["text_parts"].append(text)
+            if text and text.strip():
+                pages_dict[page_num]["text_parts"].append(text.strip())
             
             if self._is_image_category(category):
                 image_data = element.get("base64_encoding", "")
@@ -112,6 +120,12 @@ class UpstageParser:
             page_data = pages_dict[page_num]
             text = " ".join(page_data["text_parts"])
             images = page_data["images"]
+            
+            # 로깅 추가: 텍스트 추출 확인
+            if not text.strip():
+                logger.warning(f"Page {page_num}: No text extracted (text_parts count: {len(page_data['text_parts'])})")
+            else:
+                logger.debug(f"Page {page_num}: Extracted {len(text)} characters of text, {len(images)} images")
             
             result_pages.append(PdfPage(
                 page_number=page_num, 

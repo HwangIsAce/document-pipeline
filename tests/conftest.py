@@ -128,6 +128,22 @@ def mock_upstage_api_response(sample_base64_image):
                     {"x": 0.9424, "y": 0.808},
                     {"x": 0.0353, "y": 0.808}
                 ]
+            },
+            {
+                "id": 6,
+                "page": 2,
+                "category": "paragraph",
+                "content": {
+                    "html": "<p id='6'>HTML only text</p>",
+                    "markdown": "",  # text와 markdown이 모두 비어있으면 html 사용
+                    "text": ""
+                },
+                "coordinates": [
+                    {"x": 0.0353, "y": 0.81},
+                    {"x": 0.9424, "y": 0.81},
+                    {"x": 0.9424, "y": 0.91},
+                    {"x": 0.0353, "y": 0.91}
+                ]
             }
         ],
         "content": {

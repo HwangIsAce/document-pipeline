@@ -36,13 +36,28 @@ class TestUpstageParser:
                 "page": 2,
                 "category": "paragraph",
                 "content": {"text": "Page 2 text"}
+            },
+            {
+                "id": 4,
+                "page": 2,
+                "category": "paragraph",
+                "content": {"text": "", "markdown": "Page 2 markdown text"}
+            },
+            {
+                "id": 5,
+                "page": 3,
+                "category": "paragraph",
+                "content": {"text": "", "markdown": "", "html": "<p>Page 3 html text</p>"}
             }
         ]
         result = parser._group_elements_by_page(elements)
         
         assert 1 in result
         assert 2 in result
+        assert 3 in result
         assert "Page 1 text" in result[1]['text_parts'][0]
+        assert "Page 2 markdown text" in result[2]['text_parts'][1]  # markdown에서 추출
+        assert "Page 3 html text" in result[3]['text_parts'][0]  # html에서 태그 제거 후 추출
         assert len(result[1]['images']) == 1
         
     @patch.dict('os.environ', {'UPSTAGE_API_KEY': 'test_api_key'})
@@ -57,3 +72,13 @@ class TestUpstageParser:
         assert result[0].page_number == 1
         assert result[1].page_number == 2
         assert isinstance(result[0], PdfPage)
+        
+        # 텍스트 추출 확인 (text, markdown, html 모두 포함)
+        assert len(result[0].text) > 0  # Page 1에는 text와 markdown이 있음
+        assert len(result[1].text) > 0  # Page 2에는 text와 html이 있음
+        
+        # Markdown에서 추출된 텍스트 확인 (id 5 element가 markdown 사용)
+        assert "Markdown content" in result[0].text
+        
+        # HTML에서 추출된 텍스트 확인 (id 6 element가 html만 있음, 태그 제거 후 추출)
+        assert "HTML only text" in result[1].text
