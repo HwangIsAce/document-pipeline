@@ -21,8 +21,6 @@ def create_app(container: ApplicationContainer) -> FastAPI:
         chunking_method: ChunkingMethod = Form(ChunkingMethod.RECURSIVE),
         chunking_kwargs: str = Form("{}"),
         export_target: ExportTarget = Form(ExportTarget.QDRANT),
-        target_db_text: str = Form(None),
-        target_db_image: str = Form(None),
         target_kwargs: str = Form("{}"),
         pipeline_kwargs: str = Form("{}"),
     ):
@@ -37,8 +35,6 @@ def create_app(container: ApplicationContainer) -> FastAPI:
                 chunking_method=chunking_method.value,
                 chunking_kwargs=chunking_kwargs,
                 export_target=export_target.value,
-                target_db_text=target_db_text,
-                target_db_image=target_db_image,
                 target_kwargs=target_kwargs,
                 pipeline_kwargs=pipeline_kwargs,
             )
