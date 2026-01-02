@@ -5,7 +5,8 @@ from typing import Dict
 from src.infrastructure.target.targets import create_target
 from src.infrastructure.chunkers.chunker import get_chunking_function
 from src.infrastructure.operations.file_parser import extract_file_elements
-from src.infrastructure.operations.embeddings import TextEmbedder, ImageEmbedder
+from src.infrastructure.embedders.text_embedder import TextEmbedder
+from src.infrastructure.embedders.image_embedder import ImageEmbedder
 
 class BasicPipeline:
     _instance: "BasicPipeline | None" = None # 클래스 변수로 인스턴스 저장

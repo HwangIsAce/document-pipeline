@@ -3,7 +3,8 @@ import torch
 from sentence_transformers import SentenceTransformer
 
 from src.infrastructure.target.qdrant import QdrantProvider
-from src.infrastructure.operations.embeddings import TextEmbedder, ImageEmbedder
+from src.infrastructure.embedders.text_embedder import TextEmbedder
+from src.infrastructure.embedders.image_embedder import ImageEmbedder
 
 
 class SearchService:
