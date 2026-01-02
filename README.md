@@ -9,6 +9,9 @@ A pipeline project that parses documents and indexes them into a vector database
 - Vector Search
 - Text & Image Hybrid Search
 
+# Supported Extensions
+- JPEG, PNG, PDF, DOCX, PPTX, XLSX, HWPX, 
+
 # Usage
 
 # To-be-Organized

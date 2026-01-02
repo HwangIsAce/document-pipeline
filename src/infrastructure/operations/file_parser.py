@@ -37,7 +37,7 @@ class UpstageParser:
         """call upstage API"""
         url = "https://api.upstage.ai/v1/document-digitization"
         headers = {"Authorization": f"Bearer {self.api_key}"}
-        files = {"document": ("document.pdf", content, "application/pdf")}
+        files = {"document": ("document", content)}
         data = {
             "ocr": "force",
             "base64_encoding": "['table', 'chart', 'figure']",
