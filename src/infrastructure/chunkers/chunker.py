@@ -7,11 +7,6 @@ class ChunkingStrategy(Protocol):
     def create(self, **kwargs) -> op.FunctionSpec:
         ...
 
-class ChunkingStrategy(Protocol):
-    """Chunking strategy interface"""
-    def create(self, **kwargs) -> op.FunctionSpec:
-        ...
-
 class RecursiveChunkingStrategy:
     """Recursive chunking using SplitRecursively"""
     def create(self, **kwargs) -> op.FunctionSpec:
