@@ -2,6 +2,10 @@
 # Document Pipeline
 A pipeline project that parses documents and indexes them into a vector database for searchability, featuring flexible incremental updates.
 
+# Layer Architecture 
+
+![Layer Architecture](assets/layer.png)
+
 # Key features
 - PDF Document Parsing
 - Text Embedding & Chunking
