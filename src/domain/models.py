@@ -12,11 +12,15 @@ class PdfPage:
     text: str
     images: list[PdfImage]
     
+@dataclass
+class TextChunk:
+    """Text chunk structure matching SplitRecursively output"""
+    text: str
+    
 # Enums
 class ChunkingMethod(str, Enum):
     RECURSIVE = "recursive"
-    # 나중에 추가 가능: SENTENCE = "sentence",...
-
+    LLM_SEMANTIC = "llm_semantic"
 
 class ExportTarget(str, Enum):
     QDRANT = "qdrant"

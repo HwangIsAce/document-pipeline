@@ -1,6 +1,7 @@
 from cocoindex import op, functions
 from typing import Protocol
 
+from src.infrastructure.chunkers.strategies.llm_semantic import llm_semantic_chunk
 from src.infrastructure.chunkers.strategies.recursive import get_recursive_separators
 
 class ChunkingStrategy(Protocol):
@@ -21,10 +22,16 @@ class RecursiveChunkingStrategy:
                 )
             ]),
         )
+        
+class LLMChunkingStrategy:
+    """LLM semantic chunking using llm_semantic_chunk"""
+    def create(self, **kwargs) -> op.FunctionSpec:
+        return llm_semantic_chunk
 
 # Registry
 CHUNKING_REGISTRY: dict[str, type[ChunkingStrategy]] = {
     "recursive": RecursiveChunkingStrategy,
+    "llm_semantic": LLMChunkingStrategy,
 }
 
 def get_chunking_function(method: str, **kwargs) -> tuple[op.FunctionSpec, dict]:
@@ -37,9 +44,20 @@ def get_chunking_function(method: str, **kwargs) -> tuple[op.FunctionSpec, dict]
     
     used_keys = {
         "recursive": {"custom_languages"},
+        "llm_semantic": {"organization", "api_key", "model_name", "chunk_size", "chunk_overlap"},
     }
     
     used = used_keys.get(method, set())
+    
+    if method == "llm_semantic":
+        func_spec = strategy.create(**kwargs)
+        
+        unused_kwargs = {
+            k: v for k, v in kwargs.items() 
+            if k in used and v is not None
+        }
+        return func_spec, unused_kwargs
+    
     unused_kwargs = {k: v for k, v in kwargs.items() if k not in used}
     
     return strategy.create(**kwargs), unused_kwargs

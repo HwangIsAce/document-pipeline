@@ -11,12 +11,22 @@ class Config:
         self.IMAGE_EMBEDDING_MODEL_NAME = "openai/clip-vit-large-patch14"
         
         
-        # Chunking 기본값
+        # Recursive Chunking 기본값
         self.CHUNKING_METHOD = "recursive"
         self.CHUNKING_KWARGS = {
             "language": "text",
             "chunk_size": 600,
             "chunk_overlap": 100,
+        }
+        
+        # LLM Semantic Chunking 기본값
+        self.CHUNKING_METHOD = "llm_semantic"
+        self.CHUNKING_KWARGS = {
+            "organization": "openai",
+            "api_key": None,
+            "model_name": "gpt-4o-mini",
+            "chunk_size": 50,
+            "chunk_overlap": 10,
         }
         
         # Export 기본값
