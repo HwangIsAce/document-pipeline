@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import patch
 
 from src.domain.models import PdfPage
-from src.infrastructure.operations.file_parser import UpstageParser
+from src.infrastructure.parsers.file_parser import UpstageParser
 
 class TestUpstageParser:
     
@@ -61,7 +61,7 @@ class TestUpstageParser:
         assert len(result[1]['images']) == 1
         
     @patch.dict('os.environ', {'UPSTAGE_API_KEY': 'test_api_key'})
-    @patch('src.infrastructure.operations.file_parser.UpstageParser._call_api')
+    @patch('src.infrastructure.parsers.file_parser.UpstageParser._call_api')
     def test_extract(self, mock_call_api, mock_upstage_api_response):
         parser = UpstageParser()
         mock_call_api.return_value = mock_upstage_api_response
