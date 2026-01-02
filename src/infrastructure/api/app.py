@@ -1,6 +1,8 @@
-# app.py
+import time
 import cocoindex
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Query
+import logging
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Query, Request
+
 from typing import Optional
 
 from src.application.container import ApplicationContainer
@@ -11,9 +13,20 @@ from src.infrastructure.api.schemas import (
     UploadResponse,
 )
 
+logger = logging.getLogger(__name__)
+
 def create_app(container: ApplicationContainer) -> FastAPI:
     """Create FastAPI app with dependency injection"""
     app = FastAPI()
+    
+    @app.middleware("http")
+    async def log_requests(request: Request, call_next):
+        start_time = time.time()
+        logger.info(f"Request: {request.method} {request.url}")
+        response = await call_next(request)
+        process_time = time.time() - start_time
+        logger.info(f"Response: {response.status_code} in {process_time:.2f}s")
+        return response
     
     @app.post("/index", response_model=UploadResponse)
     async def index_document(
@@ -45,6 +58,7 @@ def create_app(container: ApplicationContainer) -> FastAPI:
                 filepath=filepath,
             )
         except Exception as e:
+            logger.error(f"Indexing failed: {str(e)}", exc_info=True)
             raise HTTPException(status_code=500, detail=f"Indexing failed: {str(e)}")
     
     @app.post("/search", response_model=SearchResponse)
@@ -58,6 +72,7 @@ def create_app(container: ApplicationContainer) -> FastAPI:
             )
             return SearchResponse(results=results)
         except Exception as e:
+            logger.error(f"Search failed: {str(e)}", exc_info=True)
             raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
     
     @app.post("/search/image")
@@ -76,6 +91,7 @@ def create_app(container: ApplicationContainer) -> FastAPI:
             )
             return SearchResponse(results=results)
         except Exception as e:
+            logger.error(f"Image search failed: {str(e)}", exc_info=True)
             raise HTTPException(status_code=500, detail=f"Image search failed: {str(e)}")
     
     return app
