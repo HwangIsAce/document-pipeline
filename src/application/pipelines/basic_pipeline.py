@@ -3,7 +3,7 @@ import cocoindex
 from typing import Dict
 
 from src.infrastructure.target.targets import create_target
-from src.infrastructure.operations.chunking import get_chunking_function
+from src.infrastructure.operations.chunker import get_chunking_function
 from src.infrastructure.operations.file_parser import extract_file_elements
 from src.infrastructure.operations.embeddings import TextEmbedder, ImageEmbedder
 
