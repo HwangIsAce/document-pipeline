@@ -1,6 +1,7 @@
-import cocoindex
 from cocoindex import op, functions
 from typing import Protocol
+
+from src.infrastructure.chunkers.strategies.recursive import get_recursive_separators
 
 class ChunkingStrategy(Protocol):
     """Chunking strategy interface"""
@@ -10,37 +11,20 @@ class ChunkingStrategy(Protocol):
 class RecursiveChunkingStrategy:
     """Recursive chunking using SplitRecursively"""
     def create(self, **kwargs) -> op.FunctionSpec:
+        default_separators = get_recursive_separators()
+        
         return functions.SplitRecursively(
             custom_languages=kwargs.get("custom_languages", [
                 functions.CustomLanguageSpec(
                     language_name="text",
-                    separators_regex=[
-                        r"\n(\s*\n)+",
-                        r"[\.!\?]\s+",
-                        r"\n",
-                        r"\s+",
-                    ],
+                    separators_regex=default_separators,
                 )
             ]),
-        )
-
-class SeparatorChunkingStrategy:
-    """Chunking using SplitBySeparators"""
-    def create(self, **kwargs) -> op.FunctionSpec:
-        return functions.SplitBySeparators(
-            separators_regex=kwargs.get("separators_regex", [
-                r"\n\n+",
-                r"[\.!\?]\s+",
-            ]),
-            keep_separator=kwargs.get("keep_separator", "RIGHT"),
-            include_empty=kwargs.get("include_empty", False),
-            trim=kwargs.get("trim", True),
         )
 
 # Registry
 CHUNKING_REGISTRY: dict[str, type[ChunkingStrategy]] = {
     "recursive": RecursiveChunkingStrategy,
-    "separator": SeparatorChunkingStrategy,
 }
 
 def get_chunking_function(method: str, **kwargs) -> tuple[op.FunctionSpec, dict]:
@@ -53,7 +37,6 @@ def get_chunking_function(method: str, **kwargs) -> tuple[op.FunctionSpec, dict]
     
     used_keys = {
         "recursive": {"custom_languages"},
-        "separator": {"separators_regex", "keep_separator", "include_empty", "trim"},
     }
     
     used = used_keys.get(method, set())
