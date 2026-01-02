@@ -12,6 +12,13 @@ A pipeline project that parses documents and indexes them into a vector database
 # Supported Extensions
 - JPEG, PNG, PDF, DOCX, PPTX, XLSX, HWPX, 
 
+# Supported Chunking Method
+- Recursive Chunking
+- LLM Semantic Chunking
+
+# Supported Target (VectorDB)
+- Qdrant
+
 # Usage
 
 # To-be-Organized
