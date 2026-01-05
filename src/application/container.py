@@ -97,13 +97,12 @@ class ApplicationContainer:
         
         collection_text = merged_target_kwargs.get("collection_text", "text_collection")
         collection_image = merged_target_kwargs.get("collection_image", "image_collection")
-        
+                
         # 파이프라인 설정 업데이트
-        if chunking_method:
-            self.basic_pipeline.chunking_method = chunking_method
+        final_chunking_method = chunking_method or self.config.CHUNKING_METHOD
+        self.basic_pipeline.chunking_method = final_chunking_method
         self.basic_pipeline.chunking_kwargs = merged_chunking_kwargs
-        if export_target:
-            self.basic_pipeline.export_target = export_target
+        self.basic_pipeline.export_target = final_export_target
         self.basic_pipeline.target_kwargs = merged_target_kwargs
         
         # pipeline_kwargs 처리

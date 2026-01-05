@@ -19,16 +19,16 @@ class Config:
             "chunk_overlap": 100,
         }
         
-        # LLM Semantic Chunking 기본값
-        self.CHUNKING_METHOD = "llm_semantic"
-        self.CHUNKING_KWARGS = {
-            "organization": "openai",
-            "api_key": None,
-            "model_name": "gpt-4o-mini",
-            "chunk_size": 50,
-            "chunk_overlap": 10,
-        }
-        
+        # # LLM Semantic Chunking 기본값
+        # self.CHUNKING_METHOD = "llm_semantic"
+        # self.CHUNKING_KWARGS = {
+        #     "organization": "openai",
+        #     "api_key": None,
+        #     "model_name": "gpt-4o-mini",
+        #     "chunk_size": 50,
+        #     "chunk_overlap": 10,
+        # }
+    
         # Export 기본값
         self.EXPORT_TARGET = "qdrant"
         self.TARGET_KWARGS = {
