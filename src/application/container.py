@@ -3,7 +3,7 @@ import logging
 import cocoindex
 from pathlib import Path
 
-from src.infrastructure.target.qdrant import QdrantProvider
+from src.infrastructure.target.providers import create_provider
 from src.infrastructure.config import Config
 from src.application.pipelines.basic_pipeline import BasicPipeline
 from src.application.services.search_service import SearchService
@@ -20,9 +20,12 @@ class ApplicationContainer:
             config = Config()
         self.config = config
         
-        # Qdrant Provider 초기화
-        qdrant_url = self.config.TARGET_KWARGS["QDRANT_GRPC_URL"]
-        self.qdrant_provider = QdrantProvider(url=qdrant_url)
+        default_provider_url = self.config.TARGET_KWARGS["provider_url"]   
+        self.default_db_provider = create_provider(
+            provider_type=self.config.EXPORT_TARGET,
+            provider_url=default_provider_url,
+        )
+        
         
         # 인덱싱 파이프라인 초기화
         self.basic_pipeline = BasicPipeline(
@@ -36,7 +39,7 @@ class ApplicationContainer:
         
         # Search Service 초기화
         self.search_service = SearchService(
-            qdrant_provider=self.qdrant_provider,
+            db_provider=self.default_db_provider,
             text_embedder=self.basic_pipeline.text_embedder,
             image_embedder=self.basic_pipeline.image_embedder,
             text_collection_name=self.config.TARGET_KWARGS["collection_text"],
@@ -76,12 +79,21 @@ class ApplicationContainer:
             **user_chunking_kwargs,
         }
         
+        final_export_target = export_target or self.config.EXPORT_TARGET
+        
         user_target_kwargs = self._parse_json(target_kwargs)
         merged_target_kwargs = {
             **self.config.TARGET_KWARGS,
-            "connection": self.qdrant_provider.get_connection(),
             **user_target_kwargs,
         }
+        
+        provider_url = merged_target_kwargs.get("provider_url", "http://localhost:6334")
+        dynamic_provider = create_provider(
+            provider_type=final_export_target,
+            provider_url=provider_url,
+        )
+        
+        merged_target_kwargs["connection"] = dynamic_provider.get_connection()
         
         collection_text = merged_target_kwargs.get("collection_text", "text_collection")
         collection_image = merged_target_kwargs.get("collection_image", "image_collection")
@@ -100,18 +112,21 @@ class ApplicationContainer:
             for key, value in user_pipeline_kwargs.items():
                 if hasattr(self.basic_pipeline, key):
                     setattr(self.basic_pipeline, key, value)
-        
-        logger.info(f"Indexing document '{filename}' to Qdrant: text_collection={collection_text}, image_collection={collection_image}")
+
+        logger.info(
+            f"Indexing document '{filename}' to {final_export_target}: "
+            f"text_collection={collection_text}, image_collection={collection_image}"
+        )
 
         # 파이프라인 실행
         try:
             flow = cocoindex.flow.flow_by_name("BasicPipeline")
             logger.debug("Flow retrieved, starting update_async()")
             await flow.update_async()
-            logger.info(f"Successfully saved document '{filename}' to Qdrant: text_collection={collection_text}, image_collection={collection_image}")
+            logger.info(f"Successfully saved document '{filename}' to {final_export_target}: text_collection={collection_text}, image_collection={collection_image}")
         except Exception as e:
             logger.error(
-                f"Failed to save document '{filename}' to Qdrant: {e}",
+                f"Failed to save document '{filename}' to {final_export_target}: {e}",
                 exc_info=True
             )
             raise

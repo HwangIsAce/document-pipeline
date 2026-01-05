@@ -32,7 +32,7 @@ class Config:
         # Export 기본값
         self.EXPORT_TARGET = "qdrant"
         self.TARGET_KWARGS = {
-            "QDRANT_GRPC_URL": "http://localhost:6334",
+            "provider_url": "http://localhost:6334",
             "collection_text": "text_collection",
             "collection_image": "image_collection",
         }

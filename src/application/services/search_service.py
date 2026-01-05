@@ -2,23 +2,22 @@ from typing import List, Dict, Any
 import torch
 from sentence_transformers import SentenceTransformer
 
-from src.infrastructure.target.qdrant import QdrantProvider
+from src.infrastructure.target.providers import VectorDBProvider
 from src.infrastructure.embedders.text_embedder import TextEmbedder
 from src.infrastructure.embedders.image_embedder import ImageEmbedder
 
 
 class SearchService:
-    """Service for searching documents in Qdrant"""
-    
+    """Search service for vector database"""    
     def __init__(
         self,
-        qdrant_provider: QdrantProvider,
+        db_provider: VectorDBProvider,
         text_embedder: TextEmbedder,
         image_embedder: ImageEmbedder,
         text_collection_name: str,
         image_collection_name: str,
     ):
-        self.client = qdrant_provider.get_client()
+        self.client = db_provider.get_client()
         self.text_embedder = text_embedder
         self.image_embedder = image_embedder
         self.text_collection = text_collection_name

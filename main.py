@@ -17,7 +17,7 @@ def main():
 
     container = ApplicationContainer(config)
 
-    container.qdrant_provider.get_connection()
+    container.default_db_provider.get_connection()
     
     try:
         cocoindex.setup_all_flows(report_to_stdout=False)
