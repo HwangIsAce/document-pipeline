@@ -1,5 +1,6 @@
 import cocoindex
 import re
+import logging
 from tqdm import tqdm
 import tiktoken
 
@@ -8,6 +9,8 @@ from typing import List
 from src.infrastructure.chunkers.strategies.recursive import recursive_chunk_text
 from src.infrastructure.clients.openai_client import OpenAIClient
 from src.domain.models import TextChunk
+
+logger = logging.getLogger(__name__)
 
 def openai_token_count(text: str) -> int:
     """Count tokens using OpenAI's tokenizer (tiktoken)"""
@@ -26,6 +29,7 @@ def llm_semantic_chunk(
     chunk_size: int = 0,
     chunk_overlap: int = 0,
 ) -> List[TextChunk]:    
+    logger.info(f"[LLM Semantic Chunking] 시작 - text 길이: {len(text)}, model: {model_name or 'gpt-4o-mini'}, chunk_size: {chunk_size}, chunk_overlap: {chunk_overlap}")
     
     if organization == "openai":
         if model_name is None:
@@ -35,6 +39,7 @@ def llm_semantic_chunk(
         raise ValueError(f"Unsupported organization: {organization}")
     
     chunks = recursive_chunk_text(text, chunk_size=chunk_size, chunk_overlap=chunk_overlap)
+    logger.info(f"[LLM Semantic Chunking] 초기 recursive 청크 수: {len(chunks)}")
     split_indices = []
     current_chunk = 0
 
@@ -111,4 +116,7 @@ def llm_semantic_chunk(
     if current_chunk_text:
         docs.append(current_chunk_text.strip())
 
-    return [TextChunk(text=doc) for doc in docs]
+    result = [TextChunk(text=doc) for doc in docs]
+    logger.info(f"[LLM Semantic Chunking] 완료 - 최종 생성된 청크 수: {len(result)} (초기: {len(chunks)})")
+    
+    return result

@@ -1,11 +1,18 @@
 # main.py
 import os
+import logging
 import uvicorn
 import cocoindex
 
 from src.infrastructure.config import Config
 from src.application.container import ApplicationContainer
 from src.infrastructure.api.app import create_app
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
 
 def main():
     config = Config()

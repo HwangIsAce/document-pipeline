@@ -2,7 +2,7 @@ from cocoindex import op, functions
 from typing import Protocol
 
 from src.infrastructure.chunkers.strategies.llm_semantic import llm_semantic_chunk
-from src.infrastructure.chunkers.strategies.recursive import get_recursive_separators
+from src.infrastructure.chunkers.strategies.recursive import recursive_chunk
 
 class ChunkingStrategy(Protocol):
     """Chunking strategy interface"""
@@ -10,18 +10,9 @@ class ChunkingStrategy(Protocol):
         ...
 
 class RecursiveChunkingStrategy:
-    """Recursive chunking using SplitRecursively"""
+    """Recursive chunking using recursive_chunk"""
     def create(self, **kwargs) -> op.FunctionSpec:
-        default_separators = get_recursive_separators()
-        
-        return functions.SplitRecursively(
-            custom_languages=kwargs.get("custom_languages", [
-                functions.CustomLanguageSpec(
-                    language_name="text",
-                    separators_regex=default_separators,
-                )
-            ]),
-        )
+        return recursive_chunk
         
 class LLMChunkingStrategy:
     """LLM semantic chunking using llm_semantic_chunk"""
@@ -43,13 +34,13 @@ def get_chunking_function(method: str, **kwargs) -> tuple[op.FunctionSpec, dict]
     strategy = strategy_class()
     
     used_keys = {
-        "recursive": {"custom_languages"},
+        "recursive": {"separators", "chunk_size", "chunk_overlap"},
         "llm_semantic": {"organization", "api_key", "model_name", "chunk_size", "chunk_overlap"},
     }
     
     used = used_keys.get(method, set())
     
-    if method == "llm_semantic":
+    if method in ["llm_semantic", "recursive"]:
         func_spec = strategy.create(**kwargs)
         
         unused_kwargs = {
