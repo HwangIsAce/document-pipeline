@@ -17,13 +17,13 @@ class SearchService:
         text_collection_name: str,
         image_collection_name: str,
     ):
-        self.client = db_provider.get_client()
+        self.db_provider = db_provider
         self.text_embedder = text_embedder
         self.image_embedder = image_embedder
         self.text_collection = text_collection_name
         self.image_collection = image_collection_name
         
-        # SentenceTransformer 모델 (한 번만 생성)
+        # SentenceTransformer 모델
         model_name = self.text_embedder.text_embedding_model_name or "sentence-transformers/all-MiniLM-L6-v2"
         self._text_model = SentenceTransformer(model_name)
     
@@ -64,17 +64,46 @@ class SearchService:
     ) -> List[Dict[str, Any]]:
         """Search collections with text query"""
         text_embedding = self._embed_text_for_search(query)
+        text_results_raw = self.db_provider.search(
+            collection=self.text_collection,
+            embedding=text_embedding,
+            limit=limit,
+            score_threshold=score_threshold
+        )
+        
         text_results = [
-            {"id": r.id, "score": r.score, "payload": r.payload, "collection_type": "text"}
-            for r in self.client.search(self.text_collection, text_embedding, limit=limit, score_threshold=score_threshold)
+            {
+                "id": r.id,
+                "score": r.score,
+                "payload": r.payload,
+                "collection_type": "text"
+            }
+            for r in text_results_raw
         ]
         
-        # 수정: _embed_text_with_clip 사용
-        image_embedding = self._embed_text_with_clip(query)
-        image_results = [
-            {"id": r.id, "score": r.score, "payload": r.payload, "collection_type": "image"}
-            for r in self.client.search(self.image_collection, image_embedding, limit=limit, score_threshold=score_threshold)
-        ]
+        # image_collection 검색
+        image_results = []
+        try:
+            image_embedding = self._embed_text_with_clip(query)
+            image_results_raw = self.db_provider.search(
+                collection=self.image_collection,
+                embedding=image_embedding,
+                limit=limit,
+                score_threshold=score_threshold
+            )
+            
+            image_results = [
+                {
+                    "id": r.id,
+                    "score": r.score,
+                    "payload": r.payload,
+                    "collection_type": "image"
+                }
+                for r in image_results_raw
+            ]
+        except Exception:
+            # image_collection에 데이터가 없거나 에러 발생 시 빈 결과 반환
+            pass
         
         normalized_text = self._normalize_scores(text_results)
         normalized_image = self._normalize_scores(image_results)
@@ -92,14 +121,19 @@ class SearchService:
         """Search image collection with image bytes"""
         image_embedding = self.image_embedder(image_bytes)
         
-        results = self.client.search(
-            self.image_collection,
-            image_embedding,
+        results_raw = self.db_provider.search(
+            collection=self.image_collection,
+            embedding=image_embedding,
             limit=limit,
             score_threshold=score_threshold,
         )
         
         return [
-            {"id": r.id, "score": r.score, "payload": r.payload, "collection_type": "image"}
-            for r in results
+            {
+                "id": r.id,
+                "score": r.score,
+                "payload": r.payload,
+                "collection_type": "image"
+            }
+            for r in results_raw
         ]

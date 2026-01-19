@@ -1,5 +1,7 @@
-from typing import Protocol
+from typing import Protocol, List, Optional
+
 from src.infrastructure.target.qdrant import QdrantProvider
+from src.domain.models import SearchResult
 
 class VectorDBProvider(Protocol):
     """벡터 DB Provider 인터페이스"""
@@ -8,6 +10,9 @@ class VectorDBProvider(Protocol):
         ...
     def get_connection(self):
         """Cocoindex용 connection 반환"""
+        ...
+    def search(self, collection: str, embedding: List[float], limit: int = 20, score_threshold: Optional[float] = None) -> List[SearchResult]:
+        """vector db search"""
         ...
 
 def create_provider(provider_type: str, **kwargs) -> VectorDBProvider:

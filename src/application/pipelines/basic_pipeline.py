@@ -17,7 +17,7 @@ class BasicPipeline:
         image_embedding_model_name: str | None = None,
         chunking_method: str = "recursive",
         chunking_kwargs: dict | None = None,
-        export_target: str = "qdrant",
+        export_target: str | None= None,
         target_kwargs: dict | None = None,
     ):
         self.text_embedder = TextEmbedder(text_embedding_model_name)

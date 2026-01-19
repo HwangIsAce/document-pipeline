@@ -25,3 +25,12 @@ class ChunkingMethod(str, Enum):
 class ExportTarget(str, Enum):
     QDRANT = "qdrant"
     # 나중에 추가 가능: ELASTICSEARCH = "elasticsearch",...
+    
+@dataclass
+class SearchResult:
+    """표준화된 검색 결과 모델"""
+    id: str
+    score: float
+    payload: dict
+    collection_type: str
+    
