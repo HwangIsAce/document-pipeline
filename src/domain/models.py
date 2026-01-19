@@ -24,6 +24,7 @@ class ChunkingMethod(str, Enum):
 
 class ExportTarget(str, Enum):
     QDRANT = "qdrant"
+    CHROMA = "chroma"
     # 나중에 추가 가능: ELASTICSEARCH = "elasticsearch",...
     
 @dataclass

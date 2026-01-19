@@ -29,11 +29,19 @@ class Config:
         #     "chunk_overlap": 10,
         # }
     
-        # Export 기본값
-        self.EXPORT_TARGET = "qdrant"
+        # # Qdrant 기본값
+        # self.EXPORT_TARGET = "qdrant"
+        # self.TARGET_KWARGS = {
+        #     "provider_url": "http://localhost:6334",
+        #     "collection_text": "text_collection",
+        #     "collection_image": "image_collection",
+        # }
+        
+        # Chroma 기본값
+        self.EXPORT_TARGET = "chroma"
         self.TARGET_KWARGS = {
-            "provider_url": "http://localhost:6334",
+            "url": None,  # None이면 로컬 모드
+            "persist_directory": "./chroma_db",
             "collection_text": "text_collection",
             "collection_image": "image_collection",
         }
-        

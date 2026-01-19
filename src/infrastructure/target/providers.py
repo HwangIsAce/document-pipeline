@@ -1,6 +1,7 @@
 from typing import Protocol, List, Optional
 
 from src.infrastructure.target.qdrant import QdrantProvider
+from src.infrastructure.target.chroma import ChromaProvider
 from src.domain.models import SearchResult
 
 class VectorDBProvider(Protocol):
@@ -28,10 +29,14 @@ def create_provider(provider_type: str, **kwargs) -> VectorDBProvider:
     """
     if provider_type == "qdrant":
         return QdrantProvider(url=kwargs["provider_url"])
+    elif provider_type == "chroma":
+        url = kwargs.get("provider_url")
+        persist_directory = kwargs.get("persist_directory")
+        return ChromaProvider(url=url, persist_directory=persist_directory)
     # elif provider_type == "weaviate":
     #     return WeaviateProvider(url=kwargs["provider_url"])
     else:
         raise ValueError(
             f"Unknown provider type: {provider_type}. "
-            f"Available: ['qdrant']"  # 나중에 확장
+            f"Available: ['qdrant', 'chroma']"
         )

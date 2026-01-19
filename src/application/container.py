@@ -20,11 +20,29 @@ class ApplicationContainer:
             config = Config()
         self.config = config
         
-        default_provider_url = self.config.TARGET_KWARGS["provider_url"]   
-        self.default_db_provider = create_provider(
-            provider_type=self.config.EXPORT_TARGET,
-            provider_url=default_provider_url,
-        )
+        # Provider 타입에 따라 다른 파라미터 사용
+        provider_type = self.config.EXPORT_TARGET
+        if provider_type == "qdrant":
+            provider_url = self.config.TARGET_KWARGS.get("provider_url", "http://localhost:6334")
+            self.default_db_provider = create_provider(
+                provider_type=provider_type,
+                provider_url=provider_url,
+            )
+        elif provider_type == "chroma":
+            url = self.config.TARGET_KWARGS.get("url")
+            persist_directory = self.config.TARGET_KWARGS.get("persist_directory", "./chroma_db")
+            self.default_db_provider = create_provider(
+                provider_type=provider_type,
+                provider_url=url,  # create_provider에서 url로 처리
+                persist_directory=persist_directory,
+            )
+        else:
+            # 기본값: provider_url 사용
+            provider_url = self.config.TARGET_KWARGS.get("provider_url")
+            self.default_db_provider = create_provider(
+                provider_type=provider_type,
+                provider_url=provider_url,
+            )
         
         
         # 인덱싱 파이프라인 초기화
@@ -87,13 +105,18 @@ class ApplicationContainer:
             **user_target_kwargs,
         }
         
-        provider_url = merged_target_kwargs.get("provider_url", "http://localhost:6334")
-        dynamic_provider = create_provider(
-            provider_type=final_export_target,
-            provider_url=provider_url,
-        )
-        
-        merged_target_kwargs["connection"] = dynamic_provider.get_connection()
+        # Qdrant인 경우에만 connection 필요
+        if final_export_target == "qdrant":
+            provider_url = merged_target_kwargs.get("provider_url", "http://localhost:6334")
+            dynamic_provider = create_provider(
+                provider_type=final_export_target,
+                provider_url=provider_url,
+            )
+            merged_target_kwargs["connection"] = dynamic_provider.get_connection()
+        elif final_export_target == "chroma":
+            # Chroma는 connection이 필요 없고, url과 persist_directory를 직접 사용
+            # merged_target_kwargs에 이미 포함되어 있음
+            pass
         
         collection_text = merged_target_kwargs.get("collection_text", "text_collection")
         collection_image = merged_target_kwargs.get("collection_image", "image_collection")

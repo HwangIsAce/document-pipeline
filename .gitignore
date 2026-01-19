@@ -14,3 +14,6 @@ wheels/
 
 # File storage
 files/
+
+# Chroma DB
+chroma_db/

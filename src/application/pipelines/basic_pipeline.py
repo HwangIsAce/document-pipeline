@@ -92,13 +92,18 @@ class BasicPipeline:
                         embedding=image["embedding"],
                     )
                 
+        # connection은 Qdrant에만 필요, Chroma는 필요 없음
+        extra_kwargs = {}
+        if self.export_target == "qdrant":
+            extra_kwargs["connection"] = self.target_kwargs.get("connection")
+        
         text_target = self._get_export_target(
             self.target_kwargs.get("collection_text", "text_collection"),
-            connection=self.target_kwargs.get("connection")
+            **extra_kwargs
         )
         image_target = self._get_export_target(
             self.target_kwargs.get("collection_image", "image_collection"),
-            connection=self.target_kwargs.get("connection")
+            **extra_kwargs
         )
         
         text_output.export("text_output", text_target, primary_key_fields=["id"])

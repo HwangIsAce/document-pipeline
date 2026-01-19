@@ -1,3 +1,12 @@
+"""Qdrant Vector DB Integration
+
+이 파일은 Qdrant Provider만 포함합니다:
+- QdrantProvider: 검색용 (SearchService에서 사용)
+
+참고: Qdrant Target/Connector는 cocoindex에 built-in으로 구현되어 있어
+      cocoindex.targets.Qdrant를 직접 사용합니다.
+"""
+
 import cocoindex
 
 from qdrant_client import QdrantClient
