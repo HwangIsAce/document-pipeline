@@ -1,5 +1,4 @@
 import os
-import cocoindex
 
 class Config:
     def __init__(self):

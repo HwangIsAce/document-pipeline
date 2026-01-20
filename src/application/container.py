@@ -2,11 +2,13 @@ import json
 import logging
 import cocoindex
 from pathlib import Path
+from typing import Optional
 
 from src.infrastructure.target.providers import create_provider
 from src.infrastructure.config import Config
 from src.application.pipelines.basic_pipeline import BasicPipeline
 from src.application.services.search_service import SearchService
+from src.infrastructure.api.schemas import IndexExtractionConfig
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +84,7 @@ class ApplicationContainer:
         chunking_kwargs: str = "{}",
         export_target: str | None = None,
         target_kwargs: str = "{}",
-        pipeline_kwargs: str = "{}",
+        extraction_config: Optional[IndexExtractionConfig] = None,
     ) -> tuple[str, str]:
         """Index a document. Returns (filename, filepath)"""
         # 파일 저장
@@ -128,12 +130,75 @@ class ApplicationContainer:
         self.basic_pipeline.export_target = final_export_target
         self.basic_pipeline.target_kwargs = merged_target_kwargs
         
-        # pipeline_kwargs 처리
-        user_pipeline_kwargs = self._parse_json(pipeline_kwargs)
-        if user_pipeline_kwargs:
-            for key, value in user_pipeline_kwargs.items():
-                if hasattr(self.basic_pipeline, key):
-                    setattr(self.basic_pipeline, key, value)
+        # Extraction config 처리 (Pydantic 모델 직접 사용)
+        if extraction_config is None:
+            # extraction_config가 None이면 모든 extraction 설정 초기화
+            self.basic_pipeline.chunk_extraction_fields = []
+            self.basic_pipeline.chunk_extraction_llm_spec = None
+            self.basic_pipeline.chunk_extraction_instruction = None
+            self.basic_pipeline.image_extraction_fields = []
+            self.basic_pipeline.image_extraction_llm_spec = None
+            self.basic_pipeline.image_extraction_instruction = None
+        else:
+            # Chunk extraction 설정
+            if extraction_config.chunk_extraction:
+                chunk_ext = extraction_config.chunk_extraction
+                self.basic_pipeline.chunk_extraction_fields = chunk_ext.fields
+                
+                # LLM spec 변환
+                api_type_str = chunk_ext.llm_spec.api_type
+                if api_type_str:
+                    api_type = getattr(cocoindex.LlmApiType, api_type_str.upper(), None)
+                    if api_type:
+                        self.basic_pipeline.chunk_extraction_llm_spec = cocoindex.LlmSpec(
+                            api_type=api_type,
+                            model=chunk_ext.llm_spec.model,
+                            address=chunk_ext.llm_spec.address,
+                            api_config=chunk_ext.llm_spec.api_config,
+                        )
+                    else:
+                        logger.warning(f"Invalid api_type: '{api_type_str}'. Available types: {[e.name for e in cocoindex.LlmApiType]}")
+                        self.basic_pipeline.chunk_extraction_llm_spec = None
+                else:
+                    logger.warning("api_type is empty in chunk_extraction.llm_spec")
+                    self.basic_pipeline.chunk_extraction_llm_spec = None
+                
+                # instruction 설정 (None이어도 명시적으로 설정)
+                self.basic_pipeline.chunk_extraction_instruction = chunk_ext.instruction
+            else:
+                # chunk_extraction이 None이면 초기화
+                self.basic_pipeline.chunk_extraction_fields = []
+                self.basic_pipeline.chunk_extraction_llm_spec = None
+                self.basic_pipeline.chunk_extraction_instruction = None
+            
+            # Image extraction 설정 (VLM 확장 대비)
+            if extraction_config.image_extraction:
+                image_ext = extraction_config.image_extraction
+                self.basic_pipeline.image_extraction_fields = image_ext.fields
+                
+                # LLM spec 변환
+                api_type_str = image_ext.llm_spec.api_type
+                if api_type_str:
+                    api_type = getattr(cocoindex.LlmApiType, api_type_str.upper(), None)
+                    if api_type:
+                        self.basic_pipeline.image_extraction_llm_spec = cocoindex.LlmSpec(
+                            api_type=api_type,
+                            model=image_ext.llm_spec.model,
+                            address=image_ext.llm_spec.address,
+                            api_config=image_ext.llm_spec.api_config,
+                        )
+                    else:
+                        self.basic_pipeline.image_extraction_llm_spec = None
+                else:
+                    self.basic_pipeline.image_extraction_llm_spec = None
+                
+                # instruction 설정 (None이어도 명시적으로 설정)
+                self.basic_pipeline.image_extraction_instruction = image_ext.instruction
+            else:
+                # image_extraction이 None이면 초기화
+                self.basic_pipeline.image_extraction_fields = []
+                self.basic_pipeline.image_extraction_llm_spec = None
+                self.basic_pipeline.image_extraction_instruction = None
 
         logger.info(
             f"Indexing document '{filename}' to {final_export_target}: "
@@ -143,7 +208,6 @@ class ApplicationContainer:
         # 파이프라인 실행
         try:
             flow = cocoindex.flow.flow_by_name("BasicPipeline")
-            logger.debug("Flow retrieved, starting update_async()")
             await flow.update_async()
             logger.info(f"Successfully saved document '{filename}' to {final_export_target}: text_collection={collection_text}, image_collection={collection_image}")
         except Exception as e:

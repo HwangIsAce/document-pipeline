@@ -1,12 +1,15 @@
 import cocoindex
-
-from typing import Dict
+import logging
+from dataclasses import make_dataclass, field
+from typing import Dict, Optional, List
 
 from src.infrastructure.target.targets import create_target
 from src.infrastructure.chunkers.chunker import get_chunking_function
 from src.infrastructure.parsers.file_parser import extract_file_elements
 from src.infrastructure.embedders.text_embedder import TextEmbedder
 from src.infrastructure.embedders.image_embedder import ImageEmbedder
+
+logger = logging.getLogger(__name__)
 
 class BasicPipeline:
     _instance: "BasicPipeline | None" = None # 클래스 변수로 인스턴스 저장
@@ -28,6 +31,16 @@ class BasicPipeline:
         self.export_target = export_target
         self.target_kwargs = target_kwargs or {}
         
+        # Chunk extraction 관련 설정 (기본값: 비활성화)
+        self.chunk_extraction_fields: List[str] = []
+        self.chunk_extraction_llm_spec: Optional[cocoindex.LlmSpec] = None
+        self.chunk_extraction_instruction: Optional[str] = None
+        
+        # Image extraction 관련 설정 (기본값: 비활성화)
+        self.image_extraction_fields: List[str] = []
+        self.image_extraction_llm_spec: Optional[cocoindex.LlmSpec] = None
+        self.image_extraction_instruction: Optional[str] = None
+        
         BasicPipeline._instance = self # 클래스 변수에 인스턴스 저장
     
     @classmethod
@@ -42,6 +55,31 @@ class BasicPipeline:
         return get_chunking_function(
             self.chunking_method,
             **self.chunking_kwargs,
+        )
+    
+    def _create_extraction_schema(self, field_names: List[str]) -> type:
+        """Create extraction schema dynamically from field names"""
+        fields = [(name, Optional[str], field(default=None)) for name in field_names]
+        schema = make_dataclass("ExtractedFields", fields)
+        
+        # docstring 추가 (LLM이 필드를 이해하기 쉽도록)
+        if field_names:
+            schema.__doc__ = f"Extracted fields: {', '.join(field_names)}"
+        
+        return schema
+    
+    def _should_extract_chunk(self) -> bool:
+        """Check if chunk extraction is enabled"""
+        return (
+            len(self.chunk_extraction_fields) > 0 
+            and self.chunk_extraction_llm_spec is not None
+        )
+    
+    def _should_extract_image(self) -> bool:
+        """Check if image extraction is enabled"""
+        return (
+            len(self.image_extraction_fields) > 0 
+            and self.image_extraction_llm_spec is not None
         )
         
     def _get_export_target(self, collection_name: str, **extra_kwargs: Dict):
@@ -75,22 +113,80 @@ class BasicPipeline:
                 
                 with page["chunks"].row() as chunk: # text chunk 처리
                     chunk["embedding"] = chunk["text"].call(self.text_embedder)
-                    text_output.collect(
-                        id=cocoindex.GeneratedField.UUID,
-                        filename=doc["filename"],
-                        page=page["page_number"],
-                        text=chunk["text"],
-                        embedding=chunk["embedding"],
-                    )
+                    
+                    collect_data = {
+                        "id": cocoindex.GeneratedField.UUID,
+                        "filename": doc["filename"],
+                        "page": page["page_number"],
+                        "text": chunk["text"],
+                        "embedding": chunk["embedding"],
+                    }
+                    
+                    # Chunk extraction이 활성화된 경우
+                    if self._should_extract_chunk():
+                        extraction_schema = self._create_extraction_schema(self.chunk_extraction_fields)
+                        
+                        extract_kwargs = {
+                            "llm_spec": self.chunk_extraction_llm_spec,
+                            "output_type": extraction_schema,
+                        }
+                        if self.chunk_extraction_instruction:
+                            extract_kwargs["instruction"] = self.chunk_extraction_instruction
+                        
+                        try:
+                            # ExtractByLlm은 transform()을 사용
+                            chunk["extracted"] = chunk["text"].transform(
+                                cocoindex.functions.ExtractByLlm(**extract_kwargs)
+                            )
+                            
+                            # chunk["extracted"]는 dataclass 인스턴스 (flow context에서 자동 unwrap)
+                            for field_name in self.chunk_extraction_fields:
+                                field_value = getattr(chunk["extracted"], field_name, None)
+                                if field_value is not None:
+                                    collect_data[field_name] = field_value
+                                    
+                        except Exception as e:
+                            logger.error(f"Extraction failed for chunk: {e}", exc_info=True)
+                            # 에러 발생 시에도 계속 진행 (extraction 없이 저장)
+                    
+                    text_output.collect(**collect_data)
                 with page["images"].row() as image: # image 처리
                     image["embedding"] = image["data"].call(self.image_embedder)
-                    image_output.collect(
-                        id=cocoindex.GeneratedField.UUID,
-                        filename=doc["filename"],
-                        page=page["page_number"],
-                        image_data=image["data"],
-                        embedding=image["embedding"],
-                    )
+                    
+                    collect_data = {
+                        "id": cocoindex.GeneratedField.UUID,
+                        "filename": doc["filename"],
+                        "page": page["page_number"],
+                        "image_data": image["data"],
+                        "embedding": image["embedding"],
+                    }
+                    
+                    # Image extraction이 활성화된 경우
+                    # TODO: ExtractByLlm이 VLM을 지원하면 아래 주석을 해제하고 수정
+                    # 현재는 ExtractByLlm이 텍스트만 받으므로 비활성화
+                    if self._should_extract_image():
+                        # VLM 확장 시: ExtractByLlm이 이미지를 직접 받을 수 있으면
+                        # extraction_schema = self._create_extraction_schema(self.image_extraction_fields)
+                        # extract_kwargs = {
+                        #     "llm_spec": self.image_extraction_llm_spec,
+                        #     "output_type": extraction_schema,
+                        # }
+                        # if self.image_extraction_instruction:
+                        #     extract_kwargs["instruction"] = self.image_extraction_instruction
+                        # 
+                        # image["extracted"] = image["data"].transform(
+                        #     cocoindex.functions.ExtractByLlm(**extract_kwargs)
+                        # )
+                        # 
+                        # for field_name in self.image_extraction_fields:
+                        #     field_value = getattr(image["extracted"], field_name, None)
+                        #     if field_value is not None:
+                        #         collect_data[field_name] = field_value
+                        
+                        # 현재는 비활성화: ExtractByLlm이 VLM을 지원할 때까지 대기
+                        pass
+                    
+                    image_output.collect(**collect_data)
                 
         # connection은 Qdrant에만 필요, Chroma는 필요 없음
         extra_kwargs = {}
