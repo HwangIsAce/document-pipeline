@@ -13,6 +13,7 @@ from collections import defaultdict
 from typing import Dict, List
 
 from src.domain.models import PdfImage, PdfPage
+from src.domain.exceptions import ExternalServiceError
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +32,7 @@ class UpstageParser:
         
         self.api_key = os.getenv("UPSTAGE_API_KEY")
         if not self.api_key:
-            raise ValueError("UPSTAGE_API_KEY environment variable is required")
+            raise ExternalServiceError("UPSTAGE_API_KEY environment variable is required")
     
     def _call_api(self, content: bytes) -> Dict:
         """call upstage API"""
@@ -44,9 +45,12 @@ class UpstageParser:
             "model": "document-parse"
         }
         
-        response = requests.post(url, headers=headers, files=files, data=data)
-        response.raise_for_status()
-        return response.json()   
+        try:
+            response = requests.post(url, headers=headers, files=files, data=data)
+            response.raise_for_status()
+            return response.json()
+        except requests.HTTPError as e:
+            raise ExternalServiceError(f"Upstage API failed: {e}")   
     
     def _is_image_category(self, category: str) -> bool:
         """check if the category is an image category"""

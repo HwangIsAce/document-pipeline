@@ -5,6 +5,7 @@ from sentence_transformers import SentenceTransformer
 from src.infrastructure.target.providers import VectorDBProvider
 from src.infrastructure.embedders.text_embedder import TextEmbedder
 from src.infrastructure.embedders.image_embedder import ImageEmbedder
+from src.domain.exceptions import ExternalServiceError
 
 
 class SearchService:
@@ -63,13 +64,16 @@ class SearchService:
         score_threshold: float | None = None
     ) -> List[Dict[str, Any]]:
         """Search collections with text query"""
-        text_embedding = self._embed_text_for_search(query)
-        text_results_raw = self.db_provider.search(
-            collection=self.text_collection,
-            embedding=text_embedding,
-            limit=limit,
-            score_threshold=score_threshold
-        )
+        try:
+            text_embedding = self._embed_text_for_search(query)
+            text_results_raw = self.db_provider.search(
+                collection=self.text_collection,
+                embedding=text_embedding,
+                limit=limit,
+                score_threshold=score_threshold
+            )
+        except Exception as e:
+            raise ExternalServiceError(f"Text search failed: {e}")
         
         text_results = [
             {
@@ -119,14 +123,17 @@ class SearchService:
         score_threshold: float | None = None
     ) -> List[Dict[str, Any]]:
         """Search image collection with image bytes"""
-        image_embedding = self.image_embedder(image_bytes)
-        
-        results_raw = self.db_provider.search(
-            collection=self.image_collection,
-            embedding=image_embedding,
-            limit=limit,
-            score_threshold=score_threshold,
-        )
+        try:
+            image_embedding = self.image_embedder(image_bytes)
+            
+            results_raw = self.db_provider.search(
+                collection=self.image_collection,
+                embedding=image_embedding,
+                limit=limit,
+                score_threshold=score_threshold,
+            )
+        except Exception as e:
+            raise ExternalServiceError(f"Image search failed: {e}")
         
         return [
             {

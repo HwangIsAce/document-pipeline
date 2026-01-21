@@ -3,6 +3,7 @@ from typing import Protocol, List, Optional
 from src.infrastructure.target.qdrant import QdrantProvider
 from src.infrastructure.target.chroma import ChromaProvider
 from src.domain.models import SearchResult
+from src.domain.exceptions import ValidationError
 
 class VectorDBProvider(Protocol):
     """벡터 DB Provider 인터페이스"""
@@ -36,7 +37,7 @@ def create_provider(provider_type: str, **kwargs) -> VectorDBProvider:
     # elif provider_type == "weaviate":
     #     return WeaviateProvider(url=kwargs["provider_url"])
     else:
-        raise ValueError(
+        raise ValidationError(
             f"Unknown provider type: {provider_type}. "
             f"Available: ['qdrant', 'chroma']"
         )

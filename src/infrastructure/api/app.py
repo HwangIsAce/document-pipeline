@@ -2,11 +2,13 @@ import time
 import cocoindex
 import logging
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Query, Request
+from fastapi.responses import JSONResponse
 
 from typing import Optional
 
 from src.application.container import ApplicationContainer
 from src.domain.models import ChunkingMethod, ExportTarget
+from src.domain.exceptions import DocumentPipelineError
 from src.infrastructure.api.schemas import (
     SearchRequest,
     SearchResponse,
@@ -18,6 +20,13 @@ logger = logging.getLogger(__name__)
 def create_app(container: ApplicationContainer) -> FastAPI:
     """Create FastAPI app with dependency injection"""
     app = FastAPI()
+    
+    @app.exception_handler(DocumentPipelineError)
+    async def pipeline_error_handler(request: Request, exc: DocumentPipelineError):
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"error": exc.__class__.__name__, "detail": exc.message}
+        )
     
     @app.middleware("http")
     async def log_requests(request: Request, call_next):
