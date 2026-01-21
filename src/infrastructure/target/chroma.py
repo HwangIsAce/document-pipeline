@@ -6,10 +6,9 @@
 - ChromaTargetConnector: 인덱싱용 Connector (CocoIndex에서 사용)
 """
 
-from typing import List, Optional, Any
+from typing import List, Optional
 import chromadb
 
-import cocoindex
 from cocoindex import op
 
 from src.domain.models import SearchResult
@@ -146,9 +145,13 @@ class ChromaTargetConnector:
                 else:
                     ids_to_upsert.append(doc_id_str)
                     embedding = mutation.get("embedding", [])
+                    # embedding을 제외한 모든 필드를 metadata로 저장
                     metadata = {k: v for k, v in mutation.items() if k != "embedding"}
+                    
+                    # image_data는 제거 (이미지는 별도 처리)
                     if "image_data" in metadata:
                         del metadata["image_data"]
+                    
                     embeddings_to_upsert.append(embedding)
                     metadatas_to_upsert.append(metadata)
             

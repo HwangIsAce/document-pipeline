@@ -1,5 +1,5 @@
-import json
 import time
+import cocoindex
 import logging
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Query, Request
 
@@ -11,7 +11,6 @@ from src.infrastructure.api.schemas import (
     SearchRequest,
     SearchResponse,
     UploadResponse,
-    IndexExtractionConfig,
 )
 
 logger = logging.getLogger(__name__)
@@ -34,25 +33,14 @@ def create_app(container: ApplicationContainer) -> FastAPI:
         file: UploadFile = File(...),
         chunking_method: ChunkingMethod = Form(ChunkingMethod.RECURSIVE),
         chunking_kwargs: str = Form("{}"),
-        export_target: ExportTarget = Form(ExportTarget.QDRANT),
+        export_target: ExportTarget = Form(ExportTarget.CHROMA),
         target_kwargs: str = Form("{}"),
-        extraction_config: Optional[str] = Form(None, description="Extraction configuration as JSON string (IndexExtractionConfig)"),
+        pipeline_kwargs: str = Form("{}"),
     ):
         """Index a document. Worker will automatically detect and index the file."""
         try:
             content = await file.read()
             filename = file.filename or "document.pdf"
-            
-            # Extraction config 파싱 및 검증 (Pydantic 모델 사용)
-            extraction_config_model = None
-            if extraction_config:
-                try:
-                    extraction_config_dict = json.loads(extraction_config)
-                    extraction_config_model = IndexExtractionConfig(**extraction_config_dict)
-                except json.JSONDecodeError as e:
-                    raise HTTPException(status_code=400, detail=f"Invalid JSON in extraction_config: {str(e)}")
-                except Exception as e:
-                    raise HTTPException(status_code=400, detail=f"Invalid extraction_config format: {str(e)}")
             
             filename, filepath = await container.index_document(
                 file_content=content,
@@ -61,7 +49,7 @@ def create_app(container: ApplicationContainer) -> FastAPI:
                 chunking_kwargs=chunking_kwargs,
                 export_target=export_target.value,
                 target_kwargs=target_kwargs,
-                extraction_config=extraction_config_model,
+                pipeline_kwargs=pipeline_kwargs,
             )
             
             return UploadResponse(

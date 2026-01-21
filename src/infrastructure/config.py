@@ -1,4 +1,5 @@
 import os
+import cocoindex
 
 class Config:
     def __init__(self):
@@ -44,3 +45,12 @@ class Config:
             "collection_text": "text_collection",
             "collection_image": "image_collection",
         }
+        
+        # Extraction 기본값 (flow 빌드 시 extraction 구조가 포함되도록 설정)
+        # 실제 extraction은 API 요청 시 extraction_llm_spec이 설정된 경우에만 수행됨
+        self.EXTRACTION_FIELDS = ["summary", "key_concepts"]  # 기본 extraction 필드
+        self.EXTRACTION_LLM_SPEC = cocoindex.LlmSpec(
+            api_type=cocoindex.LlmApiType.OPENAI,
+            model="gpt-4o-mini",
+        )
+        self.EXTRACTION_INSTRUCTION = "Extract a brief summary and key concepts from the text"
