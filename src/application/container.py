@@ -28,6 +28,8 @@ class ApplicationContainer:
                 provider_type=provider_type,
                 provider_url=provider_url,
             )
+            # Qdrant는 flow 빌드 시점에 connection이 필요하므로 미리 설정
+            self.config.TARGET_KWARGS["connection"] = self.default_db_provider.get_connection()
         elif provider_type == "chroma":
             url = self.config.TARGET_KWARGS.get("url")
             persist_directory = self.config.TARGET_KWARGS.get("persist_directory", "./chroma_db")

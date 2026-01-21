@@ -2,12 +2,14 @@
 import os
 import uvicorn
 import cocoindex
+from dotenv import load_dotenv
 
 from src.infrastructure.config import Config
 from src.application.container import ApplicationContainer
 from src.infrastructure.api.app import create_app
 
 def main():
+    load_dotenv()
     config = Config()
     
     if not os.getenv("COCOINDEX_DATABASE_URL"):
